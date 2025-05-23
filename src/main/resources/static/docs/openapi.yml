@@ -512,6 +512,141 @@ paths:
       responses:
         '204':
           description: "Действие успешно удалено"
+  /progress/quests/{questId}/locations/{locationId}:
+    post:
+      tags:
+        - "Quests"
+      summary: "Отметить посещение локации в квесте"
+      description: "Отмечает, что пользователь посетил определённую локацию в рамках квеста. Возвращает статус и флаг завершения квеста."
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+          description: JWT access-токен
+        - in: path
+          name: questId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: "ID квеста"
+        - in: path
+          name: locationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: "ID локации"
+      responses:
+        '200':
+          description: "Статус посещения локации"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  quest_completed:
+                    type: string
+                    example: "true"
+        '400':
+          description: "Ошибка запроса"
+          content:
+            application/json:
+              schema:
+                type: string
+        '404':
+          description: "Квест или локация не найдены"
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /progress/quests:
+    get:
+      tags:
+        - "Quests"
+      summary: "Получить прогресс пользователя по всем квестам"
+      description: "Возвращает список квестов, которые пользователь начал, с информацией о прогрессе по каждому."
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+          description: JWT access-токен
+      responses:
+        '200':
+          description: "Список прогресса по квестам"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuestProgressDto'
+
+  /progress/quests/{questId}:
+    get:
+      tags:
+        - "Quests"
+      summary: "Получить прогресс пользователя по конкретному квесту"
+      description: "Возвращает прогресс пользователя по выбранному квесту."
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+          description: JWT access-токен
+        - in: path
+          name: questId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: "ID квеста"
+      responses:
+        '200':
+          description: "Прогресс по квесту"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestProgressDto'
+
+    delete:
+      tags:
+        - "Quests"
+      summary: "Сбросить прогресс пользователя по квесту"
+      description: "Сбрасывает прогресс пользователя по выбранному квесту."
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+          description: JWT access-токен
+        - in: path
+          name: questId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: "ID квеста"
+      responses:
+        '200':
+          description: "Статус сброса прогресса"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
 
 components:
   schemas:
@@ -847,3 +982,30 @@ components:
         - "WALKING"
         - "EQUESTRIAN"
         - "BUS"
+    QuestProgressDto:
+      type: object
+      properties:
+        quest_id:
+          type: string
+          format: uuid
+          description: "ID квеста"
+          example: "d8a96f6a-c7fa-4d99-9de3-8d40f72929b5"
+        quest_title:
+          type: string
+          description: "Название квеста"
+          example: "Escape the Room"
+        completed:
+          type: boolean
+          description: "Завершён ли квест"
+          example: false
+        visited_locations:
+          type: array
+          description: "ID посещённых локаций"
+          items:
+            type: string
+            format: uuid
+          example: ["b5c56d8b-7649-4f13-b937-539dd75da347"]
+        total_locations:
+          type: integer
+          description: "Общее количество локаций в квесте"
+          example: 5
