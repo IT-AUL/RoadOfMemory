@@ -356,5 +356,4 @@ public class LocationService {
                 .orElseThrow(() -> new NotFoundException("Action not found"));
         actionRepository.delete(action);
     }
-
 }

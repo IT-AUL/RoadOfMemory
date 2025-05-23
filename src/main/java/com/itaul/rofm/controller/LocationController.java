@@ -28,14 +28,13 @@ public class LocationController {
 
 
     @PostMapping("/locations")
-    public ResponseEntity<String> createLocation(
+    public ResponseEntity<LocationResponseDto> createLocation(
             @RequestHeader("Authorization") String token,
             @RequestParam("title") String title,
             @RequestParam("language") Language language) {
         var user = userService.findById(jwtService.getUserId(token)).get();
         var location = new Location(user, title, language);
-        locationService.save(location);
-        return ResponseEntity.ok("Created location");
+        return ResponseEntity.ok(locationService.save(location));
     }
 
     @PostMapping("/locations/{id}/publish")

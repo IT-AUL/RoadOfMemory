@@ -2,15 +2,16 @@ package com.itaul.rofm.services;
 
 import com.itaul.rofm.dto.UserAuthDto;
 import com.itaul.rofm.exception.InternalServerException;
+import com.itaul.rofm.model.Location;
+import com.itaul.rofm.model.Quest;
 import com.itaul.rofm.model.User;
+import com.itaul.rofm.model.UserProgress;
 import com.itaul.rofm.repository.UserRepository;
 import com.itaul.rofm.util.TelegramAuth;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -20,7 +21,6 @@ public class UserService {
     @Value("${app.telegram.expirationIn}")
     private int expirationIn;
     private final UserRepository userRepository;
-
 
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -98,5 +98,37 @@ public class UserService {
         }
     }
 
+    public void visitLocation(User user, UUID questId, UUID locationId) {
+        UserProgress progress = new UserProgress(user, questId, locationId);
+        user.getProgress().add(progress);
+        try {
+            userRepository.save(user);
+        } catch (Exception e) {
+            throw new InternalServerException("Failed to save user progress", e);
+        }
+    }
+
+    public boolean hasVisitedLocation(User user, UUID questId, UUID locationId) {
+        return user.getProgress().stream()
+                .anyMatch(progress -> progress.getQuestId().equals(questId)
+                        && progress.getLocationId().equals(locationId));
+    }
+
+    public boolean isQuestCompleted(Quest quest) {
+        // Получаем все локации квеста
+        List<Location> questLocations = quest.getLocations();
+        if (questLocations == null || questLocations.isEmpty()) {
+            return false;
+        }
+
+        // Проверяем, все ли локации посещены
+        for (Location location : questLocations) {
+            if (!hasVisitedLocation(quest.getId(), location.getId())) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
