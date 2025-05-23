@@ -1,5 +1,6 @@
 package com.itaul.rofm.controller;
 
+import com.itaul.rofm.dto.QuestProgressDto;
 import com.itaul.rofm.dto.RefreshTokenDto;
 import com.itaul.rofm.dto.UserAuthDto;
 import com.itaul.rofm.exception.BadRequestException;
@@ -7,7 +8,10 @@ import com.itaul.rofm.exception.NotFoundException;
 import com.itaul.rofm.model.Location;
 import com.itaul.rofm.model.Quest;
 import com.itaul.rofm.model.User;
+import com.itaul.rofm.model.UserProgress;
 import com.itaul.rofm.services.JwtService;
+import com.itaul.rofm.services.LocationService;
+import com.itaul.rofm.services.QuestService;
 import com.itaul.rofm.services.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +28,8 @@ public class UserController {
 
     private final UserService userService;
     private final JwtService jwtService;
+    private final QuestService questService;
+    private final LocationService locationService;
 
     @PostMapping("/auth")
     public ResponseEntity<Map<String, String>> createUser(
@@ -49,11 +55,11 @@ public class UserController {
 
     @PostMapping("/progress/quests/{questId}/locations/{locationId}")
     public ResponseEntity<Map<String, String>> visitLocation(
-            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader("Authorization") String token,
             @PathVariable UUID questId,
             @PathVariable UUID locationId) {
-
-        User user = userService.findById(principal.getId())
+        var userId = jwtService.getUserId(token);
+        User user = userService.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
 
         Quest quest = questService.findById(questId)
@@ -87,14 +93,31 @@ public class UserController {
 
     @GetMapping("/progress/quests")
     public ResponseEntity<List<QuestProgressDto>> getAllQuestsProgress(
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @RequestHeader("Authorization") String token) {
 
-        User user = userService.findById(principal.getId())
+        var userId = jwtService.getUserId(token);
+        User user = userService.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
 
-        List<Quest> allQuests = questService.findPublished();
+        Set<UUID> startedQuestIds = user.getProgress().stream()
+                .map(UserProgress::getQuestId)
+                .collect(Collectors.toSet());
 
-        List<QuestProgressDto> progressList = allQuests.stream()
+        // Если пользователь не начал ни одного квеста, возвращаем пустой список
+        if (startedQuestIds.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
+        // Получаем объекты квестов для начатых пользователем квестов
+        List<Quest> startedQuests = startedQuestIds.stream()
+                .map(questService::findById)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .filter(Quest::isPublished) // Только опубликованные квесты
+                .collect(Collectors.toList());
+
+        // Формируем список DTO с прогрессом для каждого начатого квеста
+        List<QuestProgressDto> progressList = startedQuests.stream()
                 .map(quest -> {
                     QuestProgressDto dto = new QuestProgressDto();
                     dto.setQuestId(quest.getId());
@@ -118,10 +141,10 @@ public class UserController {
 
     @GetMapping("/progress/quests/{questId}")
     public ResponseEntity<QuestProgressDto> getQuestProgress(
-            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader("Authorization") String token,
             @PathVariable UUID questId) {
-
-        User user = userService.findById(principal.getId())
+        var userId = jwtService.getUserId(token);
+        User user = userService.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
 
         Quest quest = questService.findById(questId)
@@ -145,13 +168,12 @@ public class UserController {
 
     @DeleteMapping("/progress/quests/{questId}")
     public ResponseEntity<Map<String, String>> resetQuestProgress(
-            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader("Authorization") String token,
             @PathVariable UUID questId) {
-
-        User user = userService.findById(principal.getId())
+        var userId = jwtService.getUserId(token);
+        User user = userService.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
 
-        // Проверяем существование квеста
         if (!questService.existsById(questId)) {
             throw new NotFoundException("Квест не найден");
         }

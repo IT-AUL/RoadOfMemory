@@ -284,4 +284,20 @@ public class QuestService {
             throw new InternalServerException("Failed to get quest", e);
         }
     }
+
+    public List<Quest> findPublished() {
+        try {
+            return questRepository.findByPublished(true);
+        } catch (Exception e) {
+            throw new InternalServerException("Failed to get published quests", e);
+        }
+    }
+
+    public boolean existsById(UUID id) {
+        try {
+            return questRepository.existsById(id);
+        } catch (Exception e) {
+            throw new InternalServerException("Failed to check if quest exists", e);
+        }
+    }
 }

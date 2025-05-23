@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -127,6 +128,20 @@ public class UserService {
         }
 
         return true;
+    }
+
+    public void resetQuestProgress(User user, UUID questId) {
+        user.setProgress(
+                user.getProgress().stream()
+                        .filter(progress -> !progress.getQuestId().equals(questId))
+                        .collect(Collectors.toList())
+        );
+
+        try {
+            userRepository.save(user);
+        } catch (Exception e) {
+            throw new InternalServerException("Ошибка при сбросе прогресса", e);
+        }
     }
 }
 
