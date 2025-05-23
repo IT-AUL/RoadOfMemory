@@ -114,16 +114,14 @@ public class UserService {
                         && progress.getLocationId().equals(locationId));
     }
 
-    public boolean isQuestCompleted(Quest quest) {
-        // Получаем все локации квеста
+    public boolean isQuestCompleted(User user, Quest quest) {
         List<Location> questLocations = quest.getLocations();
         if (questLocations == null || questLocations.isEmpty()) {
             return false;
         }
 
-        // Проверяем, все ли локации посещены
         for (Location location : questLocations) {
-            if (!hasVisitedLocation(quest.getId(), location.getId())) {
+            if (!hasVisitedLocation(user, quest.getId(), location.getId())) {
                 return false;
             }
         }
